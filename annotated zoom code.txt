@@ -38,7 +38,7 @@
         textdnpadding: "10px",               // Padding for the text display
         textdnfont: "13px/20px cursive",     // Font style for the text display
         scrollspeedanimate: 5,               // Speed of the scroll animation
-        zoomspeedanimate: 3,                 // Speed of the zoom animation
+        zoomspeedanimate: 3,                 // Speed of the zoom animation, changed from 7 to 3
         loopspeedanimate: 2.5,               // Speed of the loop animation
         magnifierspeedanimate: 350,          // Speed of the magnifier animation
         classmagnifier: "magnifier",         // CSS class for the magnifier
