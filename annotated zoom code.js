@@ -1,0 +1,168 @@
+/*www.zoomsl.tw1.ru Sergey Zaragulov skype: deeserge icq: 287295769 sergeland@mail.ru*/
+
+(function($){
+
+    // Default settings for the image zoom plugin
+    var defaultSettings = {
+        loadinggif: "",                      // Loading GIF image source
+        loadopacity: 0.1,                    // Opacity of the image during loading
+        loadbackground: "#878787",           // Background color during loading
+        cursorshade: true,                   // Enable or disable cursor shade
+        magnifycursor: "crosshair",          // Cursor type when magnifying
+        cursorshadecolor: "#fff",            // Color of the cursor shade
+        cursorshadeopacity: 0.3,             // Opacity of the cursor shade
+        cursorshadeborder: "1px solid black",// Border for the cursor shade
+        zindex: "",                          // Z-index for the zooming elements
+        stepzoom: 0.5,                       // Zoom step increment
+        zoomrange: [2, 2],                   // Range of zoom levels
+        zoomstart: 2,                        // Initial zoom level
+        disablewheel: true,                  // Disable mouse wheel for zooming
+        showstatus: true,                    // Show zoom status
+        showstatustime: 2000,                // Time to display zoom status
+        statusdivborder: "1px solid black",  // Border for the status div
+        statusdivbackground: "#C0C0C0",      // Background color for the status div
+        statusdivpadding: "4px",             // Padding for the status div
+        statusdivfont: "bold 13px Arial",    // Font style for the status div
+        statusdivopacity: 0.8,               // Opacity of the status div
+        magnifierpos: "right",               // Position of the magnifier relative to the image
+        magnifiersize: [0, 0],               // Size of the magnifier
+        magnifiereffectanimate: "showIn",    // Animation effect for the magnifier
+        innerzoom: false,                    // Enable or disable inner zoom
+        innerzoommagnifier: false,           // Enable or disable inner zoom magnifier
+        descarea: false,                     // Enable or disable description area
+        leftoffset: 15,                      // Left offset for the zoom area
+        rightoffset: 15,                     // Right offset for the zoom area
+        switchsides: true,                   // Switch sides of the zoom area
+        magnifierborder: "1px solid black",  // Border for the magnifier
+        textdnbackground: "#fff",            // Background color for the text display
+        textdnpadding: "10px",               // Padding for the text display
+        textdnfont: "13px/20px cursive",     // Font style for the text display
+        scrollspeedanimate: 5,               // Speed of the scroll animation
+        zoomspeedanimate: 3,                 // Speed of the zoom animation, changed from 7 to 3
+        loopspeedanimate: 2.5,               // Speed of the loop animation
+        magnifierspeedanimate: 350,          // Speed of the magnifier animation
+        classmagnifier: "magnifier",         // CSS class for the magnifier
+        classcursorshade: "cursorshade",     // CSS class for the cursor shade
+        classstatusdiv: "statusdiv",         // CSS class for the status div
+        classtextdn: "textdn"                // CSS class for the text display
+    };
+
+    // Plugin initialization function
+    $.fn.imagezoomsl = function(options){
+        options = options || {}; // Use default settings if none are provided
+        
+        return this.each(function(){
+            if(!$(this).is("img")) return true; // Only apply to img elements
+            
+            var img = this;
+            
+            setTimeout(function(){
+                $(new Image).on('load', function(){
+                    // After the image is loaded, initialize zoom functionality
+                    ZoomLogic.init($(img), options);
+                }).attr("src", $(img).attr("src"));
+            }, 30); // Delay initialization by 30ms
+        });
+    };
+
+    var ZoomLogic = {}; // Object to contain the zooming logic
+
+    $.extend(ZoomLogic, {
+        U: navigator.userAgent.indexOf("MSIE") !== -1, // Check if the browser is Internet Explorer
+        
+        // Function to get the highest zIndex from parent elements
+        getMaxZIndex: function(element){
+            var maxZ = 0;
+            element.parents().add(element).each(function(){
+                var zIndex = parseInt($(this).css("zIndex"), 10);
+                maxZ = Math.max(maxZ, isNaN(zIndex) ? 0 : zIndex);
+            });
+            return maxZ;
+        },
+        
+        // Function to handle the zooming process based on mouse movement
+        zoom: function(event) {
+            var settings = event.data.settings; // Access the plugin settings
+            var specs = event.data.specs;       // Get the specs (dimensions, offsets, etc.)
+            
+            var mouseX = event.pageX - specs.imageOffset.left;  // Calculate mouse X position relative to image
+            var mouseY = event.pageY - specs.imageOffset.top;   // Calculate mouse Y position relative to image
+
+            // Adjust the magnifier position based on the mouse movement
+            specs.magnifier.css({
+                left: Math.max(0, Math.min(specs.imageWidth - specs.magnifierWidth, mouseX - specs.magnifierWidth / 2)),
+                top: Math.max(0, Math.min(specs.imageHeight - specs.magnifierHeight, mouseY - specs.magnifierHeight / 2))
+            });
+            
+            // Update the zoomed image position based on the magnifier position
+            specs.zoomedImage.css({
+                left: -(mouseX * specs.zoomRatioX - specs.magnifierWidth / 2),
+                top: -(mouseY * specs.zoomRatioY - specs.magnifierHeight / 2)
+            });
+        },
+        
+        // Initialization function for the zoom functionality
+        init: function($img, options){
+            var settings = $.extend({}, defaultSettings, options); // Combine default settings with user options
+
+            // Define specs object to hold image and zoom properties
+            var specs = {
+                image: $img,
+                imageWidth: $img.width(),
+                imageHeight: $img.height(),
+                imageOffset: $img.offset(),
+                magnifierWidth: settings.magnifiersize[0] || $img.width() / settings.zoomstart,
+                magnifierHeight: settings.magnifiersize[1] || $img.height() / settings.zoomstart,
+                zoomRatioX: settings.zoomstart,
+                zoomRatioY: settings.zoomstart,
+                magnifier: $('<div class="' + settings.classmagnifier + '"></div>').css({
+                    width: settings.magnifiersize[0],
+                    height: settings.magnifiersize[1],
+                    position: 'absolute',
+                    border: settings.magnifierborder,
+                    backgroundColor: settings.loadbackground,
+                    opacity: settings.loadopacity,
+                    zIndex: ZoomLogic.getMaxZIndex($img) + 1,
+                    cursor: settings.magnifycursor,
+                    display: 'none'
+                }),
+                zoomedImage: $('<img>').attr('src', $img.attr('src')).css({
+                    position: 'absolute',
+                    width: $img.width() * settings.zoomrange[0],
+                    height: $img.height() * settings.zoomrange[1],
+                    display: 'none'
+                })
+            };
+
+            // Append the magnifier and zoomed image to the DOM
+            $img.after(specs.magnifier).after(specs.zoomedImage);
+
+            // Event listeners for mouse movements and mouse wheel
+            $img.on('mousemove', { settings: settings, specs: specs }, ZoomLogic.zoom);
+            specs.magnifier.on('mousemove', { settings: settings, specs: specs }, ZoomLogic.zoom);
+
+            // Show the magnifier and zoomed image when hovering over the image
+            $img.hover(function(){
+                specs.magnifier.show();
+                specs.zoomedImage.show();
+            }, function(){
+                specs.magnifier.hide();
+                specs.zoomedImage.hide();
+            });
+
+            // If inner zoom is enabled, apply additional settings
+            if (settings.innerzoom) {
+                specs.zoomedImage.css({
+                    position: 'relative',
+                    width: $img.width(),
+                    height: $img.height()
+                });
+                specs.magnifier.hide();
+            }
+        }
+
+        // Additional zoom-related logic can be added here
+
+    });
+    
+})(jQuery);
